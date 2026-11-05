@@ -179,8 +179,7 @@ select {
 
 input:focus-visible,
 select:focus-visible,
-button:focus-visible,
-.diagram svg:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -516,4 +515,43 @@ svg.chart {
   display: grid;
   align-content: start;
   gap: 12px;
+}
+
+.diagram svg:focus {
+  outline: none;
+}
+
+.diagram svg[data-keyboard-focus="true"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.diagram-zoom {
+  margin-bottom: 8px;
+}
+
+.diagram-zoom output {
+  min-width: 4ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+.github-link:hover {
+  background: var(--accent-soft);
+}
+
+.github-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

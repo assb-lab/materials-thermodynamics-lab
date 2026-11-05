@@ -1,4 +1,14 @@
-import { forwardRef, useMemo, useRef, type KeyboardEvent } from "react";
+import { useDiagramViewport } from "./useDiagramViewport";
+import { MAX_ZOOM } from "./diagramViewport";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type KeyboardEvent,
+} from "react";
 import { colorRegions } from "../core/coloring";
 import type { HullSystem } from "../core/hull";
 import { molToW, relativeArea, wToMol, type Bary, type Section } from "../core/pseudoTernary";
@@ -14,6 +24,7 @@ const LEFT = 70;
 const TOP = 56;
 const VIEW_W = SIDE + 2 * LEFT;
 const VIEW_H = TOP + TRI_H + 64;
+const VIEW_BOUNDS = { width: VIEW_W, height: VIEW_H };
 const CORNERS: [number, number][] = [
   [LEFT + SIDE / 2, TOP], // end member 1 (top)
   [LEFT, TOP + TRI_H], // end member 2 (bottom left)
@@ -73,8 +84,31 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
   ref,
 ) {
   useLang();
-  const ends = section.endMembers;
   const interactionW = useRef<Bary | null>(null);
+  const clearProbe = useCallback(() => {
+    interactionW.current = null;
+    onProbe(null);
+  }, [onProbe]);
+  const {
+    svgRef,
+    view,
+    zoom,
+    reset,
+    reveal,
+    dragging,
+    keyboardFocus,
+    pointerDown,
+    pointerMove,
+    pointerEnd,
+    canSelect,
+    focus: focusViewport,
+    keyboard: keyboardViewport,
+    blur: blurViewport,
+  } = useDiagramViewport(VIEW_BOUNDS, clearProbe);
+  useImperativeHandle(ref, () => svgRef.current!, [svgRef]);
+  const ends = section.endMembers;
+  const systemKey = ends.map((end) => end.label).join("\0");
+  useEffect(() => reset(), [systemKey, basis, reset]);
   const toBary = (w: Bary): Bary => (basis === "mol" ? wToMol(w, ends) : w);
   const fromBary = (b: Bary): Bary => (basis === "mol" ? molToW(b, ends) : b);
   const toXY = (w: Bary) => baryToXY(toBary(w));
@@ -140,7 +174,7 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
     let w = fromBary([c[0] / s, c[1] / s, c[2] / s]);
     if (lineMode) {
       // Snap to the nearest phase marker or corner so line ends hit exact compositions.
-      let best = SNAP_PX;
+      let best = SNAP_PX / view.zoom;
       const corners: Bary[] = [
         [1, 0, 0],
         [0, 1, 0],
@@ -164,7 +198,21 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
   };
 
   const handleKey = (event: KeyboardEvent<SVGSVGElement>) => {
+    keyboardViewport();
     const current = interactionW.current ?? probe ?? fromBary([1 / 3, 1 / 3, 1 / 3]);
+    if (["+", "=", "-", "0"].includes(event.key)) {
+      event.preventDefault();
+      if (event.key === "0") reset(false);
+      else
+        zoom(
+          event.key === "-" ? 1 / 1.25 : 1.25,
+          { x: toXY(current)[0], y: toXY(current)[1] },
+          false,
+        );
+      reveal({ x: toXY(current)[0], y: toXY(current)[1] });
+      updateProbe(current);
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       updateProbe(null);
@@ -185,7 +233,10 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
       y + (event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0),
     ).map((value) => Math.max(0, value));
     const total = next.reduce((sum, value) => sum + value, 0);
-    updateProbe(fromBary(next.map((value) => value / total) as Bary));
+    const w = fromBary(next.map((value) => value / total) as Bary);
+    const [nextX, nextY] = toXY(w);
+    reveal({ x: nextX, y: nextY });
+    updateProbe(w);
   };
 
   const grid: { x1: number; y1: number; x2: number; y2: number }[] = [];
@@ -227,188 +278,237 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
   const probeXY = probe ? toXY(probe) : null;
 
   return (
-    <svg
-      ref={ref}
-      className="chart-paper"
-      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-      xmlns="http://www.w3.org/2000/svg"
-      role="img"
-      aria-label={t("diagram.ariaLabel", { system: ends.map((e) => e.label).join("–") })}
-      tabIndex={0}
-      aria-describedby="diagram-keyboard-help"
-      onFocus={() => updateProbe(probe ?? fromBary([1 / 3, 1 / 3, 1 / 3]))}
-      onBlur={() => updateProbe(null)}
-      onKeyDown={handleKey}
-      onPointerMove={(event) => updateProbe(pointAt(event))}
-      onPointerLeave={() => updateProbe(null)}
-      onClick={(event) => {
-        const w = pointAt(event);
-        if (w) {
-          updateProbe(w);
-          if (lineMode) onLinePoint(w);
-          else onPin(w);
-        }
-      }}
-      style={{ cursor: lineMode ? "crosshair" : undefined }}
-      fontFamily="Inter, system-ui, sans-serif"
-    >
-      <defs>
-        <pattern
-          id="offplane-hatch"
-          width={7}
-          height={7}
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(45)"
+    <>
+      <div className="diagram-zoom row" role="group" aria-label={t("diagram.zoom")}>
+        <button
+          type="button"
+          onClick={() => zoom(1 / 1.25)}
+          disabled={view.zoom <= 1}
+          aria-label={t("diagram.zoomOut")}
         >
-          <line x1={0} y1={0} x2={0} y2={7} stroke="var(--hatch)" strokeWidth={1.4} />
-        </pattern>
-      </defs>
-      <rect x={0} y={0} width={VIEW_W} height={VIEW_H} fill="var(--surface)" />
-
-      {regions.map(({ d }, i) => (
-        <path key={i} d={d} fill={REGION_FILLS[colors[i] % REGION_FILLS.length]} />
-      ))}
-      {regions.map(({ region, d }, i) =>
-        region.inPlane ? null : <path key={i} d={d} fill="url(#offplane-hatch)" />,
-      )}
-      {grid.map((g, i) => (
-        <line key={i} {...g} stroke="var(--grid)" strokeWidth={0.7} />
-      ))}
-      {regions.map(({ region, d }, i) => (
-        <path
-          key={i}
-          d={d}
-          fill="none"
-          stroke="var(--tie)"
-          strokeWidth={region.inPlane ? 1.3 : 1}
-          strokeDasharray={region.inPlane ? undefined : "4 3"}
-          strokeLinejoin="round"
-        />
-      ))}
-      {activeRegion !== null && regions[activeRegion] && (
-        <path
-          d={regions[activeRegion].d}
-          fill="var(--accent-soft)"
-          stroke="var(--accent)"
-          strokeWidth={2}
-          strokeLinejoin="round"
-          pointerEvents="none"
-        />
-      )}
-      {regions.map(({ area, cx, cy }, i) =>
-        area > 0.006 ? (
-          <text
-            key={i}
-            x={cx}
-            y={cy + 4}
-            textAnchor="middle"
-            fontSize={11}
-            fontWeight={600}
-            fill="var(--ink)"
-            stroke="var(--surface)"
-            strokeWidth={3}
-            paintOrder="stroke"
-            pointerEvents="none"
+          −
+        </button>
+        <output aria-live="polite">{Math.round(view.zoom * 100)}%</output>
+        <button
+          type="button"
+          onClick={() => zoom(1.25)}
+          disabled={view.zoom >= MAX_ZOOM}
+          aria-label={t("diagram.zoomIn")}
+        >
+          +
+        </button>
+        <button type="button" onClick={() => reset()} disabled={view.zoom === 1}>
+          {t("diagram.resetZoom")}
+        </button>
+        <span className="hint">{t("diagram.zoomHint")}</span>
+      </div>
+      <svg
+        ref={svgRef}
+        className="chart-paper"
+        data-full-view-box={`0 0 ${VIEW_W} ${VIEW_H}`}
+        viewBox={`${view.x} ${view.y} ${VIEW_W / view.zoom} ${VIEW_H / view.zoom}`}
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label={t("diagram.ariaLabel", { system: ends.map((e) => e.label).join("–") })}
+        tabIndex={0}
+        aria-describedby="diagram-keyboard-help"
+        data-keyboard-focus={keyboardFocus}
+        onFocus={() => {
+          focusViewport();
+          updateProbe(probe ?? fromBary([1 / 3, 1 / 3, 1 / 3]));
+        }}
+        onBlur={() => {
+          blurViewport();
+          updateProbe(null);
+        }}
+        onKeyDown={handleKey}
+        onPointerDown={pointerDown}
+        onPointerMove={(event) => {
+          if (!pointerMove(event)) updateProbe(pointAt(event));
+        }}
+        onPointerUp={pointerEnd}
+        onPointerCancel={pointerEnd}
+        onLostPointerCapture={pointerEnd}
+        onPointerLeave={() => updateProbe(null)}
+        onClick={(event) => {
+          if (!canSelect()) return;
+          const w = pointAt(event);
+          if (w) {
+            updateProbe(w);
+            if (lineMode) onLinePoint(w);
+            else onPin(w);
+          }
+        }}
+        style={{
+          cursor: dragging
+            ? "grabbing"
+            : lineMode
+              ? "crosshair"
+              : view.zoom > 1
+                ? "grab"
+                : undefined,
+          touchAction: "none",
+        }}
+        fontFamily="Inter, system-ui, sans-serif"
+      >
+        <defs>
+          <pattern
+            id="offplane-hatch"
+            width={7}
+            height={7}
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
           >
-            {i + 1}
-          </text>
-        ) : null,
-      )}
+            <line x1={0} y1={0} x2={0} y2={7} stroke="var(--hatch)" strokeWidth={1.4} />
+          </pattern>
+        </defs>
+        <rect x={0} y={0} width={VIEW_W} height={VIEW_H} fill="var(--surface)" />
 
-      <path
-        d={`M${CORNERS.map((c) => c.join(",")).join("L")}Z`}
-        fill="none"
-        stroke="var(--ink)"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      {ticks.map((t, i) => (
-        <text key={i} x={t.x} y={t.y} textAnchor={t.anchor} fontSize={11} fill="var(--ink-3)">
-          {t.label}
-        </text>
-      ))}
-      <text x={VIEW_W - 12} y={VIEW_H - 10} textAnchor="end" fontSize={11} fill="var(--ink-3)">
-        {basis === "mol" ? t("diagram.axisMol") : t("diagram.axisAtom")}
-      </text>
-
-      {markers.map((m) => {
-        const [x, y] = toXY(m.w);
-        const name = hull.phases[m.phase].entry.name;
-        let dx = x - CENTER[0];
-        let dy = y - CENTER[1];
-        const len = Math.hypot(dx, dy) || 1;
-        dx /= len;
-        dy /= len;
-        return (
-          <g key={m.phase} pointerEvents="none">
-            <circle
-              cx={x}
-              cy={y}
-              r={m.stable ? 4.5 : 4}
-              fill={m.stable ? "var(--ink)" : "var(--surface)"}
-              stroke={m.stable && !m.promoted ? "var(--surface)" : "var(--meta)"}
-              strokeWidth={m.stable && !m.promoted ? 1.5 : 2}
-            />
-            {!m.atCorner && (
-              <text
-                x={x + dx * 12}
-                y={y + dy * 12 + 4}
-                textAnchor={dx > 0.35 ? "start" : dx < -0.35 ? "end" : "middle"}
-                fontSize={m.stable ? 12 : 11}
-                fontWeight={m.stable ? 600 : 400}
-                fill={m.stable ? "var(--ink)" : "var(--ink-2)"}
-                stroke="var(--surface)"
-                strokeWidth={3}
-                paintOrder="stroke"
-              >
-                <SvgFormula f={name} />
-              </text>
-            )}
-          </g>
-        );
-      })}
-
-      {ends.map((e, i) => (
-        <text
-          key={i}
-          x={cornerLabelPos[i].x}
-          y={cornerLabelPos[i].y}
-          textAnchor={cornerLabelPos[i].anchor}
-          fontSize={16}
-          fontWeight={650}
-          fill="var(--ink)"
-        >
-          <SvgFormula f={e.label} />
-        </text>
-      ))}
-
-      <ReactionLineOverlay
-        line={line}
-        preview={lineMode && line.start && !line.end ? probe : null}
-        toXY={toXY}
-      />
-
-      {probeXY && (
-        <g pointerEvents="none">
-          <circle
-            cx={probeXY[0]}
-            cy={probeXY[1]}
-            r={6}
+        {regions.map(({ d }, i) => (
+          <path key={i} d={d} fill={REGION_FILLS[colors[i] % REGION_FILLS.length]} />
+        ))}
+        {regions.map(({ region, d }, i) =>
+          region.inPlane ? null : <path key={i} d={d} fill="url(#offplane-hatch)" />,
+        )}
+        {grid.map((g, i) => (
+          <line key={i} {...g} stroke="var(--grid)" strokeWidth={0.7} />
+        ))}
+        {regions.map(({ region, d }, i) => (
+          <path
+            key={i}
+            d={d}
             fill="none"
-            stroke="var(--surface)"
-            strokeWidth={4}
+            stroke="var(--tie)"
+            strokeWidth={region.inPlane ? 1.3 : 1}
+            strokeDasharray={region.inPlane ? undefined : "4 3"}
+            strokeLinejoin="round"
           />
-          <circle
-            cx={probeXY[0]}
-            cy={probeXY[1]}
-            r={6}
-            fill="none"
+        ))}
+        {activeRegion !== null && regions[activeRegion] && (
+          <path
+            d={regions[activeRegion].d}
+            fill="var(--accent-soft)"
             stroke="var(--accent)"
             strokeWidth={2}
+            strokeLinejoin="round"
+            pointerEvents="none"
           />
-        </g>
-      )}
-    </svg>
+        )}
+        {regions.map(({ area, cx, cy }, i) =>
+          area > 0.006 ? (
+            <text
+              key={i}
+              x={cx}
+              y={cy + 4}
+              textAnchor="middle"
+              fontSize={11}
+              fontWeight={600}
+              fill="var(--ink)"
+              stroke="var(--surface)"
+              strokeWidth={3}
+              paintOrder="stroke"
+              pointerEvents="none"
+            >
+              {i + 1}
+            </text>
+          ) : null,
+        )}
+
+        <path
+          d={`M${CORNERS.map((c) => c.join(",")).join("L")}Z`}
+          fill="none"
+          stroke="var(--ink)"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+        {ticks.map((t, i) => (
+          <text key={i} x={t.x} y={t.y} textAnchor={t.anchor} fontSize={11} fill="var(--ink-3)">
+            {t.label}
+          </text>
+        ))}
+        <text x={VIEW_W - 12} y={VIEW_H - 10} textAnchor="end" fontSize={11} fill="var(--ink-3)">
+          {basis === "mol" ? t("diagram.axisMol") : t("diagram.axisAtom")}
+        </text>
+
+        {markers.map((m) => {
+          const [x, y] = toXY(m.w);
+          const name = hull.phases[m.phase].entry.name;
+          let dx = x - CENTER[0];
+          let dy = y - CENTER[1];
+          const len = Math.hypot(dx, dy) || 1;
+          dx /= len;
+          dy /= len;
+          return (
+            <g key={m.phase} pointerEvents="none">
+              <circle
+                cx={x}
+                cy={y}
+                r={m.stable ? 4.5 : 4}
+                fill={m.stable ? "var(--ink)" : "var(--surface)"}
+                stroke={m.stable && !m.promoted ? "var(--surface)" : "var(--meta)"}
+                strokeWidth={m.stable && !m.promoted ? 1.5 : 2}
+              />
+              {!m.atCorner && (
+                <text
+                  x={x + dx * 12}
+                  y={y + dy * 12 + 4}
+                  textAnchor={dx > 0.35 ? "start" : dx < -0.35 ? "end" : "middle"}
+                  fontSize={m.stable ? 12 : 11}
+                  fontWeight={m.stable ? 600 : 400}
+                  fill={m.stable ? "var(--ink)" : "var(--ink-2)"}
+                  stroke="var(--surface)"
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                >
+                  <SvgFormula f={name} />
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {ends.map((e, i) => (
+          <text
+            key={i}
+            x={cornerLabelPos[i].x}
+            y={cornerLabelPos[i].y}
+            textAnchor={cornerLabelPos[i].anchor}
+            fontSize={16}
+            fontWeight={650}
+            fill="var(--ink)"
+          >
+            <SvgFormula f={e.label} />
+          </text>
+        ))}
+
+        <ReactionLineOverlay
+          line={line}
+          preview={lineMode && line.start && !line.end ? probe : null}
+          toXY={toXY}
+        />
+
+        {probeXY && (
+          <g pointerEvents="none">
+            <circle
+              cx={probeXY[0]}
+              cy={probeXY[1]}
+              r={6}
+              fill="none"
+              stroke="var(--surface)"
+              strokeWidth={4}
+            />
+            <circle
+              cx={probeXY[0]}
+              cy={probeXY[1]}
+              r={6}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth={2}
+            />
+          </g>
+        )}
+      </svg>
+    </>
   );
 });
 
