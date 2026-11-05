@@ -11,8 +11,15 @@
         var t = localStorage.getItem("ptpd.theme") ?? localStorage.getItem("rvc.theme");
         if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
         var l = localStorage.getItem("ptpd.lang") ?? localStorage.getItem("rvc.lang");
-        document.documentElement.lang =
-          l === "ja" || l === "en" ? l : /^ja/i.test(navigator.language) ? "ja" : "en";
+        document.documentElement.lang = ["ja", "en", "zh-CN", "ko"].includes(l)
+          ? l
+          : /^zh/i.test(navigator.language)
+            ? "zh-CN"
+            : /^ko/i.test(navigator.language)
+              ? "ko"
+              : /^ja/i.test(navigator.language)
+                ? "ja"
+                : "en";
       } catch (e) {}
     </script>
   </head>

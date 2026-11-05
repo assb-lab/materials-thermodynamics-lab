@@ -1,3 +1,4 @@
+import { registerPage } from "./pageBridge";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { parseFormula, type Composition } from "./core/formula";
 import { buildHull, type HullSystem } from "./core/hull";
@@ -272,11 +273,13 @@ export default function App() {
     }
   };
 
-  const loadSample = async () => {
+  const loadSample = async (signal?: AbortSignal) => {
+    signal?.throwIfAborted();
     const gen = startLoad();
     try {
       const { default: raw } = await import("./sample/Cl-Li-P-S_GGA_GGA+U_R2SCAN.json?raw");
-      if (gen !== loadGen.current) return;
+      signal?.throwIfAborted();
+      if (gen !== loadGen.current) throw new DOMException("Sample load superseded.", "AbortError");
       const docs = parseThermoJson([raw]);
       setDataset(datasetOf(docs, () => t("data.sampleSource")));
       setThermoType("GGA_GGA+U_R2SCAN");
@@ -289,8 +292,9 @@ export default function App() {
       setError(null);
       commit(ends, "GGA_GGA+U_R2SCAN");
     } catch (err) {
-      if (gen === loadGen.current)
+      if (gen === loadGen.current && !signal?.aborted)
         setError(new I18nError("err.jsonFailed", { msg: () => (err as Error).message }));
+      throw err;
     }
   };
 
@@ -342,6 +346,31 @@ export default function App() {
   const canUseLoaded = needed !== null && covers(dataset, needed);
   const shownError = (error ?? computed.error)?.message ?? null;
   const elementsLabel = needed ? needed.join("-") : null;
+
+  // Publish current form and dataset snapshots after every committed render.
+  useEffect(() =>
+    registerPage({
+      kind: "phase",
+      getData: () =>
+        dataset
+          ? [JSON.stringify({ data: dataset.docs, meta: { total_doc: dataset.docs.length } })]
+          : undefined,
+      getProvenance: () => ({
+        source: dataset?.source(),
+        thermoType: committed?.thermoType ?? thermoType,
+      }),
+      getStatus: () => ({
+        kind: "phase",
+        source: dataset?.source() ?? null,
+        entries: dataset?.docs.length ?? 0,
+        endMembers: committed?.ends ?? endInputs,
+        thermoType: committed?.thermoType ?? thermoType,
+        regions: result?.section.regions.length ?? 0,
+        error: shownError,
+      }),
+      loadSample,
+    }),
+  );
 
   return (
     <div className="stack">
@@ -465,7 +494,7 @@ export default function App() {
                 onChange={loadFiles}
               />
               <button onClick={() => fileRef.current?.click()}>{t("data.loadJson")}</button>
-              <button onClick={loadSample}>{t("data.sample")}</button>
+              <button onClick={() => void loadSample().catch(() => {})}>{t("data.sample")}</button>
             </div>
             {needed && (
               <details>
@@ -551,6 +580,29 @@ export default function App() {
                     onLinePoint={addLinePoint}
                   />
                 </div>
+                <div className="cursor-coordinates" aria-label={t("cursor.title")}>
+                  <span className="hint">
+                    {t("cursor.title")} · {basis === "mol" ? "mol%" : "at.%"}
+                  </span>
+                  <dl>
+                    {result.section.endMembers.map((end, i) => (
+                      <div key={i}>
+                        <dt>
+                          <Formula f={end.label} />
+                        </dt>
+                        <dd>
+                          {hoverW
+                            ? pct(
+                                basis === "mol"
+                                  ? wToMol(hoverW, result.section.endMembers)[i]
+                                  : hoverW[i],
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
                 <div className="legend">
                   <span>
                     <span className="dot" style={{ background: "var(--ink)" }} />
@@ -590,6 +642,9 @@ export default function App() {
                     {t("diagram.coverage", { pct: pct(result.section.coverage) })}
                   </p>
                 )}
+                <p className="hint" id="diagram-keyboard-help">
+                  {t("diagram.keyboard")}
+                </p>
                 <p className="hint">
                   {!lineMode
                     ? t("diagram.hint")
@@ -714,66 +769,68 @@ function ProbePanel({
         {t("probe.title")}
         {pinned && t("probe.pinned")}
       </h2>
-      {analysis ? (
-        <>
-          <div className="reaction">
-            {analysis.mol.map((m, i) => (
-              <span key={i}>
-                {i > 0 && " + "}
-                {fmt(m)} <Formula f={ends[i].label} />
-              </span>
-            ))}
-            <br />→{" "}
-            {analysis.products.map((p, i) => (
-              <span key={p.phase}>
-                {i > 0 && " + "}
-                {fmt(p.moles)} <Formula f={result.hull.phases[p.phase].entry.name} />
-              </span>
-            ))}
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>{t("probe.phase")}</th>
-                <th className="num">mol</th>
-                <th className="num">at.%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analysis.products.map((p) => (
-                <tr key={p.phase}>
-                  <td>
-                    <Formula f={result.hull.phases[p.phase].entry.name} />
-                  </td>
-                  <td className="num">{fmt(p.moles)}</td>
-                  <td className="num">{pct(p.atomFraction)}</td>
-                </tr>
+      <div className="probe-result">
+        {analysis ? (
+          <>
+            <div className="reaction">
+              {analysis.mol.map((m, i) => (
+                <span key={i}>
+                  {i > 0 && " + "}
+                  {fmt(m)} <Formula f={ends[i].label} />
+                </span>
               ))}
-            </tbody>
-          </table>
-          <p className="hint">
-            {t("probe.composition", {
-              mol: analysis.mol.map((m) => pct(m)).join(" : "),
-              atom: analysis.w.map((m) => pct(m)).join(" : "),
-            })}
-          </p>
-          {analysis.reactionEnergy !== null && (
-            <p className="status">
-              {t("probe.energy", {
-                mev: fmt(analysis.reactionEnergy * 1000, 1),
-                kj: fmt(analysis.reactionEnergy * analysis.atomsPerMixture * 96.485, 2),
+              <br />→{" "}
+              {analysis.products.map((p, i) => (
+                <span key={p.phase}>
+                  {i > 0 && " + "}
+                  {fmt(p.moles)} <Formula f={result.hull.phases[p.phase].entry.name} />
+                </span>
+              ))}
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>{t("probe.phase")}</th>
+                  <th className="num">mol</th>
+                  <th className="num">at.%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analysis.products.map((p) => (
+                  <tr key={p.phase}>
+                    <td>
+                      <Formula f={result.hull.phases[p.phase].entry.name} />
+                    </td>
+                    <td className="num">{fmt(p.moles)}</td>
+                    <td className="num">{pct(p.atomFraction)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="hint">
+              {t("probe.composition", {
+                mol: analysis.mol.map((m) => pct(m)).join(" : "),
+                atom: analysis.w.map((m) => pct(m)).join(" : "),
               })}
             </p>
-          )}
-          {pinned && (
-            <button className="link" onClick={onClear} style={{ justifySelf: "start" }}>
-              {t("probe.unpin")}
-            </button>
-          )}
-        </>
-      ) : (
-        <p className="hint">{t("probe.empty")}</p>
-      )}
+            {analysis.reactionEnergy !== null && (
+              <p className="status">
+                {t("probe.energy", {
+                  mev: fmt(analysis.reactionEnergy * 1000, 1),
+                  kj: fmt(analysis.reactionEnergy * analysis.atomsPerMixture * 96.485, 2),
+                })}
+              </p>
+            )}
+            {pinned && (
+              <button className="link" onClick={onClear} style={{ justifySelf: "start" }}>
+                {t("probe.unpin")}
+              </button>
+            )}
+          </>
+        ) : (
+          <p className="hint">{t("probe.empty")}</p>
+        )}
+      </div>
       <div className="ends">
         {ends.map((e, i) => (
           <label className="field" key={i}>

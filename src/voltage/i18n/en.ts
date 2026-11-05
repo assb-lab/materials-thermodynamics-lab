@@ -2,6 +2,13 @@ import type { MessageKey } from "./ja";
 
 /** English messages. Typed against ja.ts so a missing or extra key fails the type check. */
 export const en: Record<MessageKey, string> = {
+  "plot.cellTitle": "{phase}: {percent} at.% ({amount} per {formula}), {range}",
+  "plot.oxidation": "← Oxidation",
+  "plot.reduction": "Reduction →",
+  "plot.voltage": "Voltage (V) vs",
+  "plot.uptake": "{ion} uptake per {formula}",
+  "plot.equilibria": "Phase equilibria",
+  "film.axis": "Volume change of decomposed part (%)",
   "header.title": "Reaction voltage calculator",
   "form.target": "Target composition",
   "form.sample": "MP sample",
@@ -10,23 +17,6 @@ export const en: Record<MessageKey, string> = {
   "header.lede":
     "Computes the phase equilibria and reaction voltages (electrochemical stability window) of a composition open to a working ion, from Materials Project energies. Everything runs in your browser.",
   "header.help": "Guide",
-  "onb.title": "Getting started",
-  "onb.close": "Close the guide",
-  "onb.step1Title": "Get a Materials Project API key",
-  "onb.step1":
-    'Sign in at <a href="https://materialsproject.org/" target="_blank" rel="noopener noreferrer">materialsproject.org</a> and copy the API key from the account menu. The key is only used for queries to the MP API.',
-  "onb.step1Button": "Go to the API key field",
-  "onb.step2Title": "Enter a composition and compute",
-  "onb.step2":
-    "Choose a composition (e.g. Li6PS5Cl) and a working ion, then press “Fetch from MP and compute”. Within the elements already fetched, changing the composition recomputes immediately.",
-  "onb.step3Title": "Read the figure",
-  "onb.step3":
-    "The x axis is the ion uptake per formula unit of the target (x &lt; 0: oxidation, x &gt; 0: reduction). The grey band is the stability window of the target phase; the right panel shows the stable phase assemblage at each voltage.",
-  "onb.demo": "Try the demo data",
-  "onb.done": "Close",
-  "onb.hint": "The demo data uses made-up energies. Reopen this guide from “Guide” at any time.",
-
-  // Form
   "form.formula": "Composition",
   "form.ion": "Working ion",
   "form.data": "Data",

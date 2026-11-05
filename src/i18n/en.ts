@@ -1,6 +1,18 @@
 import type { MessageKey } from "./ja";
 
 export const en: Record<MessageKey, string> = {
+  "shell.github": "Open the GitHub repository",
+  "diagram.zoom": "Diagram zoom",
+  "diagram.zoomIn": "Zoom in",
+  "diagram.zoomOut": "Zoom out",
+  "diagram.resetZoom": "Reset view",
+  "diagram.zoomHint": "Wheel or pinch to zoom; drag to pan when zoomed. Keyboard: + / − / 0.",
+  "cursor.title": "Cursor composition",
+  "diagram.keyboard":
+    "Arrow keys move the probe, Enter pins it or sets a reaction-line endpoint, Escape clears the probe.",
+  "shell.tools": "Calculation tools",
+  "shell.voltage": "Reaction voltage calculator",
+  "shell.notFound": "Page not found.",
   "app.title": "Pseudo-ternary phase diagram",
   "app.subtitle":
     "Stable phases on a section spanned by any three compounds, from Materials Project DFT energies",

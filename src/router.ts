@@ -23,6 +23,12 @@ export const router = createRouter({
   routeTree: rootRoute.addChildren([phaseRoute, voltageRoute]),
   history: createHashHistory(),
   defaultPreload: "intent",
+  defaultViewTransition: {
+    types: ({ pathChanged }) =>
+      pathChanged && !matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? ["tool-switch"]
+        : false,
+  },
 });
 
 declare module "@tanstack/react-router" {

@@ -1,4 +1,17 @@
 export const ja = {
+  "shell.github": "GitHub リポジトリを開く",
+  "diagram.zoom": "相図の拡大縮小",
+  "diagram.zoomIn": "拡大",
+  "diagram.zoomOut": "縮小",
+  "diagram.resetZoom": "全体を表示",
+  "diagram.zoomHint":
+    "ホイール・ピンチで拡大縮小、拡大時はドラッグで移動。+ / − / 0 キーでも操作できます。",
+  "cursor.title": "カーソル位置の組成",
+  "diagram.keyboard":
+    "矢印キーで位置を移動、Enter で固定または反応ラインの端点を設定、Escape で解除します。",
+  "shell.tools": "計算ツール",
+  "shell.voltage": "反応電位計算",
+  "shell.notFound": "ページが見つかりません。",
   "app.title": "擬似三元相図",
   "app.subtitle":
     "Materials Project の DFT エネルギーから、任意の 3 化合物を頂点とする断面の安定相を描きます",

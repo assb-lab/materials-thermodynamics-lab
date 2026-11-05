@@ -81,6 +81,16 @@
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -469,4 +479,79 @@ svg.chart {
 .tool-title {
   margin: 0;
   font-size: 1.1rem;
+}
+
+.cursor-coordinates {
+  display: grid;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cursor-coordinates dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.cursor-coordinates dl > div {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.cursor-coordinates dd {
+  margin: 0;
+  min-width: 4ch;
+  text-align: right;
+}
+
+.probe-result {
+  block-size: 21rem;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overflow-wrap: anywhere;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.diagram svg:focus {
+  outline: none;
+}
+
+.diagram svg[data-keyboard-focus="true"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.diagram-zoom {
+  margin-bottom: 8px;
+}
+
+.diagram-zoom output {
+  min-width: 4ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+.github-link:hover {
+  background: var(--accent-soft);
+}
+
+.github-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

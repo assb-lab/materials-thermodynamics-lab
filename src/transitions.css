@@ -1,0 +1,35 @@
+.tool-content {
+  view-transition-name: tool-content;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(tool-content) {
+  animation: tool-fade-out 140ms ease-out both;
+}
+
+::view-transition-new(tool-content) {
+  animation: tool-fade-in 140ms ease-in both;
+}
+
+@keyframes tool-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tool-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(tool-content),
+  ::view-transition-new(tool-content) {
+    animation: none;
+  }
+}
