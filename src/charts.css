@@ -4,7 +4,6 @@ svg.chart {
   --ink: #000;
   --ink-2: #000;
   --ink-3: #000;
-  --grid: #ddd;
   --tie: #3a3a36;
   --region-1: #aac9ef;
   --region-2: #fae8bf;
@@ -21,4 +20,12 @@ svg.chart {
 svg.chart-paper text,
 svg.chart text {
   fill: #000;
+}
+
+svg.chart-paper {
+  --grid: #aaa;
+}
+
+svg.chart {
+  --grid: #ddd;
 }

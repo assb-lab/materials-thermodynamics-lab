@@ -1,6 +1,12 @@
 import type { MessageKey } from "./ja";
 
 export const zhCN: Record<MessageKey, string> = {
+  "shell.github": "打开 GitHub 仓库",
+  "diagram.zoom": "相图缩放",
+  "diagram.zoomIn": "放大",
+  "diagram.zoomOut": "缩小",
+  "diagram.resetZoom": "显示全图",
+  "diagram.zoomHint": "滚轮或双指缩放，放大后拖动平移。也可使用 + / − / 0 键。",
   "cursor.title": "光标位置的组成",
   "diagram.keyboard": "方向键移动位置，Enter 固定位置或设置反应线端点，Escape 清除。",
   "shell.tools": "计算工具",

@@ -1,6 +1,13 @@
 import type { MessageKey } from "./ja";
 
 export const ko: Record<MessageKey, string> = {
+  "shell.github": "GitHub 저장소 열기",
+  "diagram.zoom": "상도 확대/축소",
+  "diagram.zoomIn": "확대",
+  "diagram.zoomOut": "축소",
+  "diagram.resetZoom": "전체 보기",
+  "diagram.zoomHint":
+    "휠 또는 두 손가락으로 확대/축소하고 확대 후 드래그로 이동합니다. + / − / 0 키도 사용할 수 있습니다.",
   "cursor.title": "커서 위치의 조성",
   "diagram.keyboard":
     "방향키로 이동하고 Enter로 고정하거나 반응선 끝점을 설정하며 Escape로 해제합니다.",
