@@ -1,6 +1,12 @@
 import type { MessageKey } from "./ja";
 
 export const en: Record<MessageKey, string> = {
+  "cursor.title": "Cursor composition",
+  "diagram.keyboard":
+    "Arrow keys move the probe, Enter pins it or sets a reaction-line endpoint, Escape clears the probe.",
+  "shell.tools": "Calculation tools",
+  "shell.voltage": "Reaction voltage calculator",
+  "shell.notFound": "Page not found.",
   "app.title": "Pseudo-ternary phase diagram",
   "app.subtitle":
     "Stable phases on a section spanned by any three compounds, from Materials Project DFT energies",

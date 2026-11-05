@@ -1,5 +1,12 @@
 /** Japanese messages (the reference set: every key must also exist in en.ts). */
 export const ja = {
+  "plot.cellTitle": "{phase}: {percent} at.% ({formula} 1式量あたり {amount}), {range}",
+  "plot.oxidation": "← 酸化",
+  "plot.reduction": "還元 →",
+  "plot.voltage": "電位 (V) vs",
+  "plot.uptake": "{formula} 1式量あたりの {ion} 取込量",
+  "plot.equilibria": "相平衡",
+  "film.axis": "分解部分の体積変化 (%)",
   "header.title": "反応電位計算",
   "form.target": "対象組成",
   "form.sample": "MP サンプル",
@@ -8,23 +15,6 @@ export const ja = {
   "header.lede":
     "Materials Project の計算エネルギーから、指定組成を作動イオンの開放系に置いたときの相平衡と反応電位 (電気化学的安定性ウィンドウ) を計算します。計算はすべてブラウザ内で行われます。",
   "header.help": "使い方",
-  "onb.title": "はじめに",
-  "onb.close": "使い方を閉じる",
-  "onb.step1Title": "Materials Project の API key を用意",
-  "onb.step1":
-    '<a href="https://materialsproject.org/" target="_blank" rel="noopener noreferrer">materialsproject.org</a> にログインし、アカウントメニューの API key をコピーします。key は MP API への問い合わせにだけ使われます。',
-  "onb.step1Button": "API key 欄へ移動",
-  "onb.step2Title": "組成を入れて計算",
-  "onb.step2":
-    "組成 (例: Li6PS5Cl) と作動イオンを選び、「MP から取得して計算」を押します。取得済みの元素の範囲なら、組成を変えるだけで再計算されます。",
-  "onb.step3Title": "図を読む",
-  "onb.step3":
-    "横軸 x は対象 1 式量あたりのイオン取込量 (x &lt; 0 が酸化、x &gt; 0 が還元)。灰色の帯が対象相の安定性ウィンドウ、右側は各電位で安定な相の組み合わせです。",
-  "onb.demo": "デモデータで試す",
-  "onb.done": "閉じる",
-  "onb.hint": "デモデータは架空のエネルギーです。「使い方」からいつでも再表示できます。",
-
-  // Form
   "form.formula": "組成",
   "form.ion": "作動イオン",
   "form.data": "データ",

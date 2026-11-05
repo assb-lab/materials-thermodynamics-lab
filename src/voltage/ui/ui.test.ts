@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vite-plus/test";
+import { setLang, t } from "../i18n";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import { atomicFractions, computeProfile } from "../core/profile";
 import { demoEntrySet } from "./demo";
 import { profileToCsv, profileToJson } from "./export";
@@ -8,6 +9,8 @@ import { filmCellHtml, filmTooltipHtml, formatChange, formatLengthNm } from "./f
 import { renderVolumeChartSvg, type RegionFilms } from "./volumeChart";
 import { displayCoreRatio } from "./particle3d";
 import { filmForRegion } from "../core/film";
+
+afterEach(() => setLang("ja"));
 
 const profile = computeProfile({ entries: demoEntrySet().entries, formula: "Li6PS5Cl", ion: "Li" });
 
@@ -20,6 +23,16 @@ describe("demo profile", () => {
 });
 
 describe("renderProfileSvg", () => {
+  it.each(["ja", "en", "zh-CN", "ko"] as const)("localizes all plot axes in %s", (language) => {
+    setLang(language);
+    const svg = renderProfileSvg(profile);
+    expect(svg).toContain(t("plot.oxidation"));
+    expect(svg).toContain(t("plot.reduction"));
+    expect(svg).toContain(t("plot.voltage"));
+    expect(svg).toContain(t("plot.equilibria"));
+    expect(svg).toContain('fill="#fff"');
+  });
+
   it("renders a standalone SVG with all regions", () => {
     const svg = renderProfileSvg(profile);
     expect(svg.startsWith("<svg")).toBe(true);
@@ -30,7 +43,7 @@ describe("renderProfileSvg", () => {
   it("names the target only on the x axis and in its phase cell, not above the profile", () => {
     const svg = renderProfileSvg(profile);
     const label = formulaTspans(profile.formula);
-    expect(svg).toContain(`uptake per ${label}`);
+    expect(svg).toContain(t("plot.uptake", { ion: profile.ion, formula: label }));
     // x-axis label + the Li6PS5Cl cell of the stability window
     expect(svg.split(label).length - 1).toBe(2);
   });

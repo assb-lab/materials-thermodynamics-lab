@@ -1,3 +1,4 @@
+import { CHART_STYLE } from "../../chartTheme";
 import { formatNumber } from "../core/formula";
 import { atomicFractions, type Profile } from "../core/profile";
 import { t } from "../i18n";
@@ -151,10 +152,11 @@ export function renderProfileSvg(
 
   const parts: string[] = [];
   parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${L.W} ${L.H}" class="profile-svg" role="img" aria-label="${esc(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${L.W} ${L.H}" class="profile-svg" style="${CHART_STYLE}" role="img" aria-label="${esc(
       t("plot.aria", { formula: profile.formula, ion: profile.ion }),
     )}">`,
   );
+  parts.push(`<rect width="${L.W}" height="${L.H}" fill="#fff"/>`);
   parts.push(`<style>
     .profile-svg { font-family: system-ui, sans-serif; font-size: 12px; }
     .profile-svg .axis { stroke: var(--fg, #222); stroke-width: 1; fill: none; }
@@ -232,10 +234,12 @@ export function renderProfileSvg(
   parts.push(`</g>`);
   const xs = regions.map((r) => r.x);
   if (xs.some((x) => x < -1e-9))
-    parts.push(`<text class="muted" x="${L.profileL + 8}" y="${L.bottom - 9}">← Oxidation</text>`);
+    parts.push(
+      `<text class="muted" x="${L.profileL + 8}" y="${L.bottom - 9}">${esc(t("plot.oxidation"))}</text>`,
+    );
   if (xs.some((x) => x > 1e-9))
     parts.push(
-      `<text class="muted" x="${L.profileR - 8}" y="${L.bottom - 9}" text-anchor="end">Reduction →</text>`,
+      `<text class="muted" x="${L.profileR - 8}" y="${L.bottom - 9}" text-anchor="end">${esc(t("plot.reduction"))}</text>`,
     );
 
   // Phase equilibria: each voltage band is split into one cell per phase, with widths (and
@@ -260,7 +264,7 @@ export function renderProfileSvg(
       parts.push(
         opts.titles === false
           ? `<g class="cell">`
-          : `<g class="cell"><title>${esc(`${ph.entry.name}: ${pct} at.% (${formatNumber(ph.amount)} per ${profile.formula}), ${range}`)}</title>`,
+          : `<g class="cell"><title>${esc(t("plot.cellTitle", { phase: ph.entry.name, percent: pct, amount: formatNumber(ph.amount), formula: profile.formula, range }))}</title>`,
       );
       parts.push(`<rect class="box ${side}" x="${x0}" y="${yTop}" width="${w}" height="${h}"/>`);
       // Label only when it fits; narrow cells rely on the tooltip.
@@ -331,17 +335,21 @@ export function renderProfileSvg(
   // Axis titles.
   const midY = (L.top + L.bottom) / 2;
   parts.push(
-    `<text x="16" y="${midY}" text-anchor="middle" transform="rotate(-90 16 ${midY})">Voltage (V) vs ${esc(
+    `<text x="16" y="${midY}" text-anchor="middle" transform="rotate(-90 16 ${midY})">${esc(t("plot.voltage"))} ${esc(
       profile.ion,
     )}/${esc(profile.ion)}${profile.charge > 1 ? profile.charge : ""}+</text>`,
   );
   parts.push(
-    `<text x="${(L.profileL + L.profileR) / 2}" y="${L.H - 12}" text-anchor="middle">${esc(profile.ion)} uptake per ${formulaTspans(
-      profile.formula,
+    `<text x="${(L.profileL + L.profileR) / 2}" y="${L.H - 12}" text-anchor="middle">${t(
+      "plot.uptake",
+      {
+        ion: esc(profile.ion),
+        formula: formulaTspans(profile.formula),
+      },
     )}</text>`,
   );
   parts.push(
-    `<text x="${(L.phaseL + L.phaseR) / 2}" y="${L.H - 12}" text-anchor="middle">Phase equilibria</text>`,
+    `<text x="${(L.phaseL + L.phaseR) / 2}" y="${L.H - 12}" text-anchor="middle">${esc(t("plot.equilibria"))}</text>`,
   );
   parts.push(`</svg>`);
   return parts.join("\n");

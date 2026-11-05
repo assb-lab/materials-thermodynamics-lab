@@ -1,11 +1,13 @@
 import { en } from "./en";
 import { ja, type MessageKey } from "./ja";
+import { ko } from "./ko";
+import { zhCN } from "./zh-CN";
 
 export type { MessageKey };
 export type { Lang } from "../../i18n";
 import type { Lang } from "../../i18n";
 
-const dictionaries: Record<Lang, Record<MessageKey, string>> = { ja, en };
+const dictionaries: Record<Lang, Record<MessageKey, string>> = { ja, en, "zh-CN": zhCN, ko };
 let current: Lang = "ja";
 
 export function getLang(): Lang {

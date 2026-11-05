@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+import { CHART_STYLE } from "../../chartTheme";
 import type { VolumeResult } from "../core/volume";
 import type { FilmResult } from "../core/film";
 import type { Profile } from "../core/profile";
@@ -55,8 +57,9 @@ export function renderVolumeChartSvg(
   const bottom = H - M.bottom;
 
   const parts: string[] = [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="volume-svg" data-y-min="${yMin}" data-y-max="${yMax}" role="img" aria-label="${escapeHtml(ariaLabel)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="volume-svg" style="${CHART_STYLE}" data-y-min="${yMin}" data-y-max="${yMax}" role="img" aria-label="${escapeHtml(ariaLabel)}">`,
   ];
+  parts.push(`<rect width="${W}" height="${H}" fill="#fff"/>`);
   parts.push(`<style>
     .volume-svg { font: 12px system-ui, sans-serif; }
     .volume-svg text { fill: var(--fg, #202938); }
@@ -104,8 +107,8 @@ export function renderVolumeChartSvg(
   }
   parts.push(
     `<rect class="axis" x="${M.left}" y="${M.top}" width="${W - M.left - M.right}" height="${bottom - M.top}"/>`,
-    `<text x="${(M.left + W - M.right) / 2}" y="${H - 6}" text-anchor="middle">${escapeHtml(labels?.voltage ?? "Voltage (V)")} vs ${escapeHtml(profile.ion)}/${escapeHtml(profile.ion)}${profile.charge > 1 ? profile.charge : ""}+</text>`,
-    `<text transform="translate(14 ${(M.top + bottom) / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(labels?.change ?? "ΔV of decomposed part (%)")}</text>`,
+    `<text x="${(M.left + W - M.right) / 2}" y="${H - 6}" text-anchor="middle">${escapeHtml(labels?.voltage ?? t("volume.voltage"))} vs ${escapeHtml(profile.ion)}/${escapeHtml(profile.ion)}${profile.charge > 1 ? profile.charge : ""}+</text>`,
+    `<text transform="translate(14 ${(M.top + bottom) / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(labels?.change ?? t("film.axis"))}</text>`,
     `</svg>`,
   );
   return parts.join("");

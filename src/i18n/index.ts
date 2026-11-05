@@ -1,23 +1,35 @@
 import { useSyncExternalStore } from "react";
+import { zhCN } from "./zh-CN";
+import { ko } from "./ko";
 import { en } from "./en";
 import { ja, type MessageKey } from "./ja";
 import { KEYS, load, save } from "../storage";
 
-export type Lang = "ja" | "en";
-export const LANGS: Lang[] = ["ja", "en"];
+export const LANGS = ["ja", "en", "zh-CN", "ko"] as const;
+export type Lang = (typeof LANGS)[number];
+export const LANG_LABELS: Record<Lang, string> = {
+  ja: "日本語",
+  en: "English",
+  "zh-CN": "简体中文",
+  ko: "한국어",
+};
+
+export function detectLang(language: string): Lang {
+  const prefix = language.toLowerCase().split(/[-_.]/)[0];
+  return prefix === "zh" ? "zh-CN" : prefix === "ja" || prefix === "ko" ? prefix : "en";
+}
 export type { MessageKey };
 
 /** Param values may be thunks so that nested messages are translated when rendered, not when built. */
 export type Params = Record<string, string | number | (() => string)>;
 
-const dicts: Record<Lang, Record<MessageKey, string>> = { ja, en };
+const dicts: Record<Lang, Record<MessageKey, string>> = { ja, en, "zh-CN": zhCN, ko };
 
 function initialLang(): Lang {
+  if (typeof window === "undefined") return "en";
   const saved = load(KEYS.lang) ?? load("rvc.lang");
-  if (saved === "ja" || saved === "en") return saved;
-  if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("ja"))
-    return "ja";
-  return "en";
+  if (LANGS.includes(saved as Lang)) return saved as Lang;
+  return detectLang(typeof navigator === "undefined" ? "en" : navigator.language);
 }
 
 let current: Lang = initialLang();
@@ -30,8 +42,10 @@ export function getLang(): Lang {
 export function setLang(lang: Lang): void {
   if (lang === current) return;
   current = lang;
-  save(KEYS.lang, lang);
-  if (typeof document !== "undefined") document.documentElement.lang = lang;
+  if (typeof document !== "undefined") {
+    save(KEYS.lang, lang);
+    document.documentElement.lang = lang;
+  }
   listeners.forEach((l) => l());
 }
 

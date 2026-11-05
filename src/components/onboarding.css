@@ -1,0 +1,65 @@
+.lab-onboarding[hidden] {
+  display: none;
+}
+
+.lab-onboarding {
+  margin-bottom: 16px;
+}
+
+.lab-onboarding-heading {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.lab-onboarding-heading h2 {
+  margin: 0;
+}
+
+.lab-onboarding-heading button {
+  padding: 0 8px;
+  font-size: 1.1rem;
+}
+
+.lab-onboarding-intro {
+  margin: 8px 0 12px;
+  color: var(--ink-2);
+}
+
+.lab-onboarding-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.lab-onboarding-cards > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lab-onboarding-cards h3 {
+  font-size: 0.9rem;
+  margin: 0;
+  font-weight: 650;
+}
+
+.lab-onboarding-cards p {
+  margin: 0;
+}
+
+.lab-onboarding-action {
+  margin-top: auto;
+  align-self: start;
+}
+
+@media (max-width: 800px) {
+  .lab-onboarding-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lab-onboarding-cards > div + div {
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+}

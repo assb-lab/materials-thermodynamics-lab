@@ -1,3 +1,4 @@
+import { registerPage } from "../pageBridge";
 import { getApiKeySettings, load, save, setApiKeySettings } from "../storage";
 import template from "./template.html?raw";
 import { excludeEntries, parseExcludeList, type Entry, type ExcludeResult } from "./core/entries";
@@ -20,7 +21,6 @@ import { renderProfileSvg } from "./ui/plot";
 import { mountChart, voltageRange, type Chart } from "./ui/chart";
 import { escapeHtml, formulaHtml, idLinkHtml, phaseLinkHtml } from "./ui/html";
 import { stabilityWindowText } from "./ui/summary";
-import { markOnboarded, shouldShowOnboarding } from "./ui/onboarding";
 import { setLang, t, translateDom, type Lang } from "./i18n";
 import { volumeForRegion } from "./core/volume";
 import { mountVolumeInteraction } from "./ui/volumeInteraction";
@@ -643,16 +643,24 @@ export function mountVoltage(root: HTMLElement, lang: Lang) {
     applyExample(demoEntrySet(), true);
   });
 
-  $("sample").addEventListener("click", async () => {
+  async function loadSample(callerSignal?: AbortSignal): Promise<void> {
+    callerSignal?.throwIfAborted();
     const { signal } = startLoad();
     showError(null);
     try {
       const { default: raw } = await import("../sample/Cl-Li-P-S_GGA_GGA+U_R2SCAN.json?raw");
-      if (!signal.aborted) applyExample(parseEntrySet(raw));
+      signal.throwIfAborted();
+      callerSignal?.throwIfAborted();
+      const set = parseEntrySet(raw);
+      set.source = "Bundled Materials Project Cl-Li-P-S sample (2026-09-28)";
+      applyExample(set);
+      if (!profile) throw new Error(errorBox.textContent || "Sample calculation failed.");
     } catch (e) {
-      if (!signal.aborted) showError((e as Error).message);
+      if (!signal.aborted && !callerSignal?.aborted) showError((e as Error).message);
+      throw e;
     }
-  });
+  }
+  $("sample").addEventListener("click", () => void loadSample().catch(() => {}));
 
   filmToggle.addEventListener("change", showVolumeOptions);
   volumeToggle.addEventListener("change", showVolumeOptions);
@@ -731,51 +739,7 @@ export function mountVoltage(root: HTMLElement, lang: Lang) {
       );
   });
 
-  // Onboarding guide: shown on the first visit, reopened from the header.
-  const onboarding = $<HTMLElement>("onboarding");
-  const helpToggle = $<HTMLButtonElement>("helpToggle");
-  const browserStorage = (() => {
-    try {
-      return localStorage;
-    } catch {
-      return null;
-    }
-  })();
-
-  function setOnboarding(open: boolean): void {
-    onboarding.hidden = !open;
-    helpToggle.setAttribute("aria-expanded", String(open));
-    if (!open) markOnboarded(browserStorage);
-  }
-
-  helpToggle.addEventListener("click", () => {
-    const open = !!onboarding.hidden;
-    setOnboarding(open);
-    if (open) onboarding.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-  for (const id of ["onbClose", "onbDone"]) {
-    $(id).addEventListener("click", () => {
-      setOnboarding(false);
-      helpToggle.focus();
-    });
-  }
-  $("onbKey").addEventListener("click", () => {
-    apiKeyInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    apiKeyInput.focus({ preventScroll: true });
-  });
-  $("onbDemo").addEventListener("click", () => {
-    setOnboarding(false);
-    demoButton.click();
-    result.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-  onboarding.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape") {
-      setOnboarding(false);
-      helpToggle.focus();
-    }
-  });
-
-  // Language: saved choice, else the browser's (ja-* -> Japanese, otherwise English).
+  // The shared app shell owns the active language.
   function applyLanguage(lang: Lang): void {
     setLang(lang);
     translateDom(root);
@@ -787,16 +751,34 @@ export function mountVoltage(root: HTMLElement, lang: Lang) {
     if (view) chart?.setView(view);
   }
 
-  if (shouldShowOnboarding(browserStorage)) {
-    onboarding.hidden = false;
-    helpToggle.setAttribute("aria-expanded", "true");
-  }
   restore();
   applyLanguage(lang);
+
+  const unregisterPage = registerPage({
+    kind: "voltage",
+    getData: () => (data ? [serializeEntrySet(data)] : undefined),
+    getProvenance: () => ({
+      source: data?.source,
+      fetchedAt: data?.fetchedAt,
+      thermoType: data?.thermoType,
+    }),
+    getStatus: () => ({
+      kind: "voltage",
+      source: data?.source ?? null,
+      thermoType: data?.thermoType ?? null,
+      entries: data?.entries.length ?? 0,
+      formula: formulaInput.value,
+      ion: ionSelect.value,
+      result: profile ? (JSON.parse(profileToJson(profile, exportOptions())) as unknown) : null,
+      error: errorBox.hidden ? null : errorBox.textContent,
+    }),
+    loadSample,
+  });
 
   return {
     applyLanguage,
     destroy() {
+      unregisterPage();
       pendingLoad?.abort();
       chart?.destroy();
       clearExpansionInteraction?.();

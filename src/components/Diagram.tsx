@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, type PointerEvent } from "react";
+import { forwardRef, useMemo, useRef, type KeyboardEvent } from "react";
 import { colorRegions } from "../core/coloring";
 import type { HullSystem } from "../core/hull";
 import { molToW, relativeArea, wToMol, type Bary, type Section } from "../core/pseudoTernary";
@@ -74,6 +74,7 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
 ) {
   useLang();
   const ends = section.endMembers;
+  const interactionW = useRef<Bary | null>(null);
   const toBary = (w: Bary): Bary => (basis === "mol" ? wToMol(w, ends) : w);
   const fromBary = (b: Bary): Bary => (basis === "mol" ? molToW(b, ends) : b);
   const toXY = (w: Bary) => baryToXY(toBary(w));
@@ -123,16 +124,17 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
     return out;
   }, [hull, section, eHullMax]);
 
-  const handleMove = (e: PointerEvent<SVGSVGElement>) => {
+  const pointAt = (e: {
+    currentTarget: SVGSVGElement;
+    clientX: number;
+    clientY: number;
+  }): Bary | null => {
     const svg = e.currentTarget;
     const ctm = svg.getScreenCTM();
-    if (!ctm) return;
+    if (!ctm) return null;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
     const b = xyToBary(pt.x, pt.y);
-    if (b.some((v) => v < -1e-9)) {
-      onProbe(null);
-      return;
-    }
+    if (b.some((v) => v < -1e-9)) return null;
     const c = b.map((v) => Math.max(0, v));
     const s = c[0] + c[1] + c[2];
     let w = fromBary([c[0] / s, c[1] / s, c[2] / s]);
@@ -153,7 +155,37 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
         }
       }
     }
+    return w;
+  };
+
+  const updateProbe = (w: Bary | null) => {
+    interactionW.current = w;
     onProbe(w);
+  };
+
+  const handleKey = (event: KeyboardEvent<SVGSVGElement>) => {
+    const current = interactionW.current ?? probe ?? fromBary([1 / 3, 1 / 3, 1 / 3]);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      updateProbe(null);
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (lineMode) onLinePoint(current);
+      else onPin(current);
+      return;
+    }
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const [x, y] = toXY(current);
+    const step = (SIDE / 100) * (event.shiftKey ? 5 : 1);
+    const next = xyToBary(
+      x + (event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0),
+      y + (event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0),
+    ).map((value) => Math.max(0, value));
+    const total = next.reduce((sum, value) => sum + value, 0);
+    updateProbe(fromBary(next.map((value) => value / total) as Bary));
   };
 
   const grid: { x1: number; y1: number; x2: number; y2: number }[] = [];
@@ -197,13 +229,26 @@ export const Diagram = forwardRef<SVGSVGElement, DiagramProps>(function Diagram(
   return (
     <svg
       ref={ref}
+      className="chart-paper"
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label={t("diagram.ariaLabel", { system: ends.map((e) => e.label).join("–") })}
-      onPointerMove={handleMove}
-      onPointerLeave={() => onProbe(null)}
-      onClick={() => probe && (lineMode ? onLinePoint(probe) : onPin(probe))}
+      tabIndex={0}
+      aria-describedby="diagram-keyboard-help"
+      onFocus={() => updateProbe(probe ?? fromBary([1 / 3, 1 / 3, 1 / 3]))}
+      onBlur={() => updateProbe(null)}
+      onKeyDown={handleKey}
+      onPointerMove={(event) => updateProbe(pointAt(event))}
+      onPointerLeave={() => updateProbe(null)}
+      onClick={(event) => {
+        const w = pointAt(event);
+        if (w) {
+          updateProbe(w);
+          if (lineMode) onLinePoint(w);
+          else onPin(w);
+        }
+      }}
       style={{ cursor: lineMode ? "crosshair" : undefined }}
       fontFamily="Inter, system-ui, sans-serif"
     >

@@ -26,6 +26,12 @@ export function downloadSvg(svg: SVGSVGElement, filename: string): void {
       .join(";");
     dst[i].setAttribute("style", style);
   });
+  clone.style.background = "#fff";
+  const paper = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  paper.setAttribute("width", "100%");
+  paper.setAttribute("height", "100%");
+  paper.setAttribute("fill", "#fff");
+  clone.insertBefore(paper, clone.firstChild);
   clone.setAttribute("width", String(svg.viewBox.baseVal.width));
   clone.setAttribute("height", String(svg.viewBox.baseVal.height));
   download(new XMLSerializer().serializeToString(clone), filename, "image/svg+xml");

@@ -59,9 +59,6 @@
   label.inline {
     flex-wrap: wrap;
   }
-  .onboarding .icon-button {
-    padding: 0 8px;
-  }
   #result {
     min-width: 0;
   }
@@ -163,49 +160,6 @@
   }
   tr.zero {
     background: color-mix(in srgb, var(--window) 25%, transparent);
-  }
-  .onboarding-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .onboarding h2 {
-    margin: 0;
-  }
-  .steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    padding: 0;
-    margin: 12px 0 4px;
-    list-style: none;
-    counter-reset: step;
-  }
-  .steps li {
-    counter-increment: step;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-  }
-  .steps li strong::before {
-    content: counter(step);
-    display: inline-grid;
-    place-items: center;
-    width: 1.5em;
-    height: 1.5em;
-    margin-right: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--on-accent);
-    font-size: 0.85em;
-  }
-  .steps p {
-    margin: 6px 0 8px;
-    font-size: 0.9rem;
-    color: var(--muted);
-  }
-  .steps a {
-    color: var(--accent);
   }
   .legend {
     display: flex;

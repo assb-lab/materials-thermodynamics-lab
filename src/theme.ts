@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KEYS, load, save } from "./storage";
 
 export type Theme = "auto" | "light" | "dark";
@@ -17,6 +17,11 @@ export function applyTheme(theme: Theme): void {
 
 export function useTheme(): [Theme, (t: Theme) => void] {
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  useEffect(() => {
+    const sync = () => setTheme(loadTheme());
+    window.addEventListener("materials-theme-change", sync);
+    return () => window.removeEventListener("materials-theme-change", sync);
+  }, []);
   const update = (t: Theme) => {
     setTheme(t);
     save(KEYS.theme, t);

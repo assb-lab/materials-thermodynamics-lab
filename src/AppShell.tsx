@@ -1,17 +1,40 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Outlet } from "@tanstack/react-router";
-import { LANGS, setLang, t, useLang, type Lang } from "./i18n";
+import { LANGS, LANG_LABELS, setLang, t, useLang, type Lang } from "./i18n";
+import { Onboarding } from "./components/Onboarding";
+import { onboardingMessages } from "./components/onboardingMessages";
+import { load, save } from "./storage";
 import { THEMES, useTheme } from "./theme";
 
 export function AppShell() {
   const lang = useLang();
   const [theme, setTheme] = useTheme();
+  const [guideOpen, setGuideOpen] = useState(() => load("mtl.onboarded") !== "1");
+  const guideButton = useRef<HTMLButtonElement>(null);
+
+  const closeGuide = () => {
+    setGuideOpen(false);
+    save("mtl.onboarded", "1");
+    guideButton.current?.focus({ preventScroll: true });
+  };
 
   return (
     <div className="app">
       <header className="header">
         <h1>Materials Thermodynamics Lab</h1>
         <div className="header-controls">
+          <button
+            type="button"
+            ref={guideButton}
+            aria-controls="lab-onboarding"
+            aria-expanded={guideOpen}
+            onClick={() => {
+              if (guideOpen) closeGuide();
+              else setGuideOpen(true);
+            }}
+          >
+            {onboardingMessages[lang].toggle}
+          </button>
           <select
             aria-label={t("settings.language")}
             value={lang}
@@ -19,7 +42,7 @@ export function AppShell() {
           >
             {LANGS.map((l) => (
               <option key={l} value={l}>
-                {l === "ja" ? "日本語" : "English"}
+                {LANG_LABELS[l]}
               </option>
             ))}
           </select>
@@ -33,17 +56,16 @@ export function AppShell() {
         </div>
         <nav
           className="tool-nav flex w-full flex-wrap items-center gap-1"
-          aria-label={lang === "ja" ? "計算ツール" : "Calculation tools"}
+          aria-label={t("shell.tools")}
         >
           <Link to="/" activeOptions={{ exact: true }}>
             {t("app.title")}
           </Link>
-          <Link to="/reaction-voltage">
-            {lang === "ja" ? "反応電位計算" : "Reaction voltage calculator"}
-          </Link>
+          <Link to="/reaction-voltage">{t("shell.voltage")}</Link>
         </nav>
       </header>
-      <main>
+      <main className="tool-content">
+        <Onboarding lang={lang} open={guideOpen} onClose={closeGuide} />
         <Outlet />
       </main>
     </div>
@@ -51,14 +73,14 @@ export function AppShell() {
 }
 
 export function NotFound() {
-  const lang = useLang();
+  useLang();
   useEffect(() => {
     document.title = "Materials Thermodynamics Lab";
   }, []);
 
   return (
     <div className="card">
-      <p>{lang === "ja" ? "ページが見つかりません。" : "Page not found."}</p>
+      <p>{t("shell.notFound")}</p>
       <Link to="/">{t("app.title")}</Link>
     </div>
   );

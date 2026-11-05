@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { en } from "./en";
 import { ja, type MessageKey } from "./ja";
+import { ko } from "./ko";
+import { zhCN } from "./zh-CN";
 import html from "../template.html?raw";
 import { getLang, setLang, t } from ".";
 
@@ -10,10 +12,12 @@ describe("i18n", () => {
   afterEach(() => setLang("ja"));
 
   it("has the same keys and placeholders in every language", () => {
-    expect(Object.keys(en).sort()).toEqual(Object.keys(ja).sort());
-    for (const key of Object.keys(ja) as MessageKey[]) {
-      expect(placeholders(en[key]), key).toEqual(placeholders(ja[key]));
-      expect(en[key].trim(), key).not.toBe("");
+    for (const dictionary of [en, zhCN, ko]) {
+      expect(Object.keys(dictionary).sort()).toEqual(Object.keys(ja).sort());
+      for (const key of Object.keys(ja) as MessageKey[]) {
+        expect(placeholders(dictionary[key]), key).toEqual(placeholders(ja[key]));
+        expect(dictionary[key].trim(), key).not.toBe("");
+      }
     }
   });
 
@@ -32,5 +36,9 @@ describe("i18n", () => {
     setLang("en");
     expect(t("summary.noneAt", { v: "1.500" })).toBe("None (decomposes at 1.500 V)");
     expect(t("io.missingPages", { total: 4, docs: 2, pages: 1 })).toMatch(/Only 2 of 4/);
+    setLang("zh-CN");
+    expect(t("summary.noneAt", { v: "1.500" })).toBe("无（在 1.500 V 分解）");
+    setLang("ko");
+    expect(t("summary.noneAt", { v: "1.500" })).toBe("없음 (1.500 V에서 분해)");
   });
 });
